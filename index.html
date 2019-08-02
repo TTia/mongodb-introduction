@@ -10,10 +10,29 @@
 
 		<link rel="stylesheet" href="css/reveal.css">
 		<link rel="stylesheet" href="css/reveal.css">
-		<link rel="stylesheet" href="css/theme/black.css">
+		<link rel="stylesheet" href="css/theme/beige.css">
 
 		<!-- Theme used for syntax highlighting of code -->
 		<link rel="stylesheet" href="lib/css/monokai.css">
+
+		<style>
+			.reveal section p,
+			 .reveal section li,
+			 .reveal section div.fragment {
+				font-size: 0.6em !important;
+			}
+
+			.reveal section pre code {
+				font-size: 0.7em !important;
+			}
+			.reveal section img {
+				margin: 0;
+			}
+			/*.reveal section p,*/
+			.reveal section h3 {
+				margin: 0;
+			}
+		</style>
 
 		<!-- Printing and PDF exports -->
 		<script>
@@ -25,7 +44,6 @@
 		</script>
 	</head>
 	<body>
-		
 		<!-- Justify left and reduce font size
 		<style type="text/css">
 			p { text-align: left; }
@@ -55,9 +73,10 @@
 						document.getElementById("spanDate").innerHTML = date.getDate() + '/' + (date.getMonth()+1) + '/' + date.getFullYear();
 					</script>
 				</section>
-				<section style="font-size: 0.80em;line-height: 130%;" data-markdown="slides.md"  
-				         data-separator="^---\n"  
-				         data-separator-vertical="^\n\n">
+				<section style="font-size: 0.80em; line-height: 130%;" 
+						data-markdown="slides.md"  
+				        data-separator="^---(\n|\r\n)"  
+				        data-separator-vertical="^===(\n|\r\n)">
 				</section>
 			</div>
 		</div>
@@ -80,6 +99,11 @@
 					{ src: 'node_modules/reveal.js-menu/menu.js' },
 					{ src: 'plugin/highlight/highlight.js', async: true, callback: function() { hljs.initHighlightingOnLoad(); } },
 				],
+				
+				history: true,
+				slideNumber: true,
+				hash: false,
+				fragmentInUrl: true,
 
 				menu: {
 					// Specifies which side of the presentation the menu will 
@@ -138,7 +162,7 @@
 					// If 'true' allows the slide number in the presentation to
 					// open the menu panel. The reveal.js slideNumber option must 
 					// be displayed for this to take effect
-					openSlideNumber: false,
+					openSlideNumber: true,
 
 					// If true allows the user to open and navigate the menu using
 					// the keyboard. Standard keyboard interaction with reveal
@@ -151,7 +175,7 @@
 					// until it is explicitly closed, that is, using the close
 					// button or pressing the ESC or m key (when the keyboard 
 					// interaction option is enabled).
-					sticky: false,
+					sticky: true,
 
 					// If 'true' standard menu items will be automatically opened
 					// when navigating using the keyboard. Note: this only takes 
@@ -160,7 +184,7 @@
 				}
 			});
 
-			Reveal.configure({ slideNumber: 'c/t' });
+			Reveal.configure({ slideNumber: 'h / v'});
 
 		</script>
 	</body>
