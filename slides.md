@@ -4,9 +4,9 @@
 
 Topics:
 - Brief introduction to MongoDB as NoSQL db
-- Key features (High performance, High availability, Horizontal Scalability)
+- CRUD examples and uses
 - Schema definition
-- Query examples and uses
+- Key features (High performance, High availability, Horizontal Scalability)
 - (Timeseries implementation - Part 2?)
 
 ---
@@ -136,11 +136,11 @@ db.runCommand( {
 })
 ```
 
-Validation is applied in a lazy fashion, for disruptive changes, a migration is the best option.
-
 **Strict validation** - Applied to all inserts and updates.
 
 **Moderate validation** - The validation rules are applied only to inserts and to updates to existing documents that already fulfill the validation criteria. With the moderate level, updates to existing documents that do not fulfill the validation criteria are not checked for validity.
+
+Validation is applied in a lazy fashion, for disruptive changes, a migration is the best option.
 
 *Validation reference: https://docs.mongodb.com/manual/core/schema-validation/index.html*
 
@@ -151,11 +151,54 @@ Validation is applied in a lazy fashion, for disruptive changes, a migration is 
 Update
 Upsert for timeseries?
 
+---
+
+### Aggregation pipeline
+
+```json
+{ "cust_id": "A123", "amount": 500, "status": "A" },
+{ "cust_id": "A123", "amount": 250, "status": "A" },
+{ "cust_id": "B212", "amount": 200, "status": "A" },
+{ "cust_id": "A123", "amount": 300, "status": "D" }
+```
+
+Query for:
+- Given order in status "A"
+- Calculate the amount per customer
+
+Translates in SQL in:
+
+```sql
+select O.cust_id, SUM(amount)
+from orders O
+where O.status = 'A'
+group by O.cust_id
+```
+
 ===
 
 ### Aggregation pipeline
 
----
+```js
+db.orders.aggregate([
+   { $match: { status: "A" } },
+   { $project: { _id: false, amount: true, cust_id: true } },
+   { $group: { _id: "$cust_id", total: { $sum: "$amount" } } }
+])
+```
+
+**First Stage:** The $match stage filters the documents by the status field and passes to the next stage those documents that have status equal to "A".
+
+**Second Stage:** The $group stage groups the documents by the cust_id field to calculate the sum of the amount for each unique cust_id.
+
+<video style="width:60%;" 
+      src="https://docs.mongodb.com/manual/_images/agg-pipeline.mp4" 
+      poster="images/mongodb_logo.png" 
+      controls> </video>
+
+===
+
+### Aggregation pipeline optimization
 
 #### Indexing
 - background
