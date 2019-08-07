@@ -1,35 +1,24 @@
-### Introduction
+### Introduction to MongoDB
+
+##### Topics:
+- Key features
+- CRUD examples and uses
+- Aggregation pipeline
+- Schema definition
+- (Timeseries implementation)
 
 [MongoDB Reference](https://docs.mongodb.com/manual/introduction/)
 
-Topics:
-- Brief introduction to MongoDB as NoSQL db
-- CRUD examples and uses
-- Schema definition
-- Key features (High performance, High availability, Horizontal Scalability)
-- (Timeseries implementation - Part 2?)
-
----
-
-### Key concepts
-
-- Database
-- Collections
-- Documents (16Mb)
-- Views
-
 ===
 
-### BSON
+#### Main characteristics
+- NoSQL Database  
+- Data is stored as "Documents", composed by key-value pairs, key-array or nested documents  
+- Dynamic schema  
+- Horizontal sharding & Strong consistency  
+- Querying by object-oriented APIs
 
-BSON is a binary representation of JSON documents, though it contains more data types than JSON. 
-
-*Reference [BSON](http://bsonspec.org/)*
-
-#### ObjectIds
-ObjectIds are small, likely unique, fast to generate, and *ordered*. ObjectId values consist of 12 bytes, where the first 4 bytes are a timestamp that reflect the ObjectId’s creation.
-
-#### 
+![Architecture](http://www.ibmbpnetwork.com/hubfs/mongodb_architecture.png)
 
 ---
 
@@ -61,6 +50,33 @@ Eventually, you can specify your own `_id` values.
 *Write concern - Acknoledge in multi-node cluster: https://docs.mongodb.com/manual/reference/write-concern/ *
 
 ===
+
+### BSON
+
+BSON is a binary representation of JSON documents, though it contains more data types than JSON. 
+
+*Reference [BSON](http://bsonspec.org/)*
+
+#### ObjectIds
+
+```
+{
+    "acknowledged" : true,
+    "insertedId" : ObjectId("5d43228ae3a64c3d95b061b2")
+}
+```
+
+ObjectIds are:
+
+- small
+- likely unique
+- fast to generate
+- and *ordered*.  
+
+ObjectId values consist of 12 bytes, where the first 4 bytes are a timestamp that reflect the ObjectId’s creation.
+
+===
+
 ### Find documents
 
 ![Find / Select](images\crud\crud-annotated-mongodb-find.bakedsvg.svg)
@@ -90,7 +106,7 @@ $ db.students.find( { semester: 1, $elemMatch: { grades: { $gte: 85 } } }, { "gr
 { "_id" : 3, "grades" : [ 85 ] }
 ```
 
-In general, through *find* and *projection* we are maintaning the document schema. Arrays of documents could be queryied by **array.field** selector. The query processor will applied the operator based on the field type.
+Through *find* and *projection* we are maintaining the document schema.
 
 *Array operators: https://docs.mongodb.com/manual/reference/operator/query-array/*  
 *TX implementation - Error handling and retries: https://docs.mongodb.com/manual/core/transactions/*
@@ -200,11 +216,38 @@ db.orders.aggregate([
 
 ### Aggregation pipeline optimization
 
+#### Thumb rules
+
+- use **$match** to limit the cardinality as first step
+- **$sort** after `match` phases, before map the original schema to a different format
+- **$project** only the needed fields
+- **$limit** the output
+
+<img src="https://i-love-png.com/images/green-thumbs-up.png" style="width: 20%; border: none; box-shadow: none;">
+
+===
+
+### Aggregation pipeline optimization
+
 #### Indexing
-- background
-- unique
+
+Create a secondary index to support you query.
+
+```js
+db.orders.find(...).explain(verbosity)
+db.orders.aggregate([...]).explain(verbosity)
+```
+
+Verbosity options are: 
+- `queryPlanner` ~ calculate the best query plan, dry run
+- `executionStats` ~ calculate and execute the best query plan
+-  and `allPlansExecution` ~ calculate and execute the best query plan, but provides statistics on the other candidates (`.hint()`)
+
+**Indexes characteristics**:
+- background generation
+- unique - will trigger validation error while inserting duplicates
 - sparse, hash, geo, tree
-- geo
+- partial matching is supported by the query planner
 
 ---
 ### Timeseries implementation
@@ -220,36 +263,30 @@ https://www.mongodb.com/blog/post/time-series-data-and-mongodb-part-3--querying-
 - Statement implementation
 
 ---
-### Good to know
+### Experiment!
 
 #### 4.0
-- Profiler
-- Capped collection
-- Retention
-- Subscription
-
-#### 4.2 (RC)
-- Materialized views with merge strategies
-- Wildcard indexes
-- Update aggregation (dynamic validation)
 
 ```
 $ docker run -d --name mongodb-rc3-bionic \
       -p "27017:27017" \
       mongo:4.2.0-rc3-bionic
-# or      
+```
+
+#### 4.2 (RC)
+
+```  
 $ docker run -d --name mongodb-rc3-bionic \
       -p "27017:27017" \
       mongo
-      
+```
+
+##### Create the root user
+
+```
 $ docker exec -it ta-fleet-mongodb mongo admin
 $ db.createUser({user:'mongodb', pwd:'mongodb', roles:[{role:'userAdminAnyDatabase',db:'admin'}] });
 $ exit
 $ mongo
 ```
-
----
-### References
-
-* ...
 
