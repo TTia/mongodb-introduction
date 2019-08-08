@@ -1,3 +1,15 @@
+## MongoDB Introduction
+#### Plus a timeseries implementation
+
+[Mattia Barrasso](https://www.linkedin.com/in/mattiabarrasso/)  
+*mattia.barrasso@flairbit.io*  
+<small>08/08/2019</small>
+
+![asd](images/mongodb_logo.png)
+
+
+---
+
 ### Introduction to MongoDB
 
 ##### Topics:
@@ -33,7 +45,7 @@ db.users.insertOne({
 })
 -->
 
-```
+```js
 {
     "acknowledged" : true,
     "insertedId" : ObjectId("5d43228ae3a64c3d95b061b2")
@@ -43,11 +55,10 @@ db.users.insertOne({
 The unique `_id` field that acts as a primary key, by leaving it empty will automatically generated.
 Eventually, you can specify your own `_id` values.
 
-- Performing a write against a non-existing collection will create a new collection, with "_id" as PK.
-- All write operations are atomic on the level of a single document.
+All write operations are atomic on the level of a single document.
 
 *Reference: https://docs.mongodb.com/manual/tutorial/insert-documents/ *  
-*Write concern - Acknoledge in multi-node cluster: https://docs.mongodb.com/manual/reference/write-concern/ *
+*Write concern - Acknowledge in multi-node cluster: https://docs.mongodb.com/manual/reference/write-concern/ *
 
 ===
 
@@ -59,7 +70,7 @@ BSON is a binary representation of JSON documents, though it contains more data 
 
 #### ObjectIds
 
-```
+```js
 {
     "acknowledged" : true,
     "insertedId" : ObjectId("5d43228ae3a64c3d95b061b2")
@@ -81,7 +92,7 @@ ObjectId values consist of 12 bytes, where the first 4 bytes are a timestamp tha
 
 ![Find / Select](images\crud\crud-annotated-mongodb-find.bakedsvg.svg)
 
-```
+```js
 { "_id" : ObjectId("5d43228ae3a64c3d95b061b2"), "name" : "sue" }
 // Note that we are projecting "address" that doesn't exists.
 ```
@@ -94,7 +105,7 @@ db.users.find(
 -->
 
 **$elemMatch**
-```
+```js
 { "_id" : 1, "semester" : 1, "grades" : [ 70, 87, 90 ] }
 { "_id" : 2, "semester" : 1, "grades" : [ 90, 88, 92 ] }
 ...
@@ -137,7 +148,7 @@ Through *find* and *projection* we are maintaining the document schema.
 
 ### Schema validation
 
-```
+```js
 db.runCommand( {
    collMod: "contacts",
    validator: { $jsonSchema: {
@@ -162,10 +173,181 @@ Validation is applied in a lazy fashion, for disruptive changes, a migration is 
 
 ===
 
-### CRUD examples (2)
+### CRUD examples - Update
 
-Update
-Upsert for timeseries?
+```js
+{
+  _id: 1,
+  item: "TBD",
+  stock: 0,
+  info: { publisher: "1111", pages: 430 },
+  tags: [ "technology", "computer" ],
+  ratings: [ { by: "ijk", rating: 4 }, { by: "lmn", rating: 5 } ],
+  reorder: false
+}
+```
+
+```js
+db.books.update(
+   { _id: 1 },    // find a book-stock document with a given _id
+   {
+     $inc: { stock: 5 },      // increase the available #stock
+     $set: {                  // set fields values
+       item: "ABC123",
+       "info.publisher": "2222",    // access to an embedded obj
+       tags: [ "software" ],
+       "ratings.1": { by: "xyz", rating: 3 }    // access to an array element
+     }
+   }
+)
+```
+
+===
+
+### CRUD examples - Update
+
+```js
+db.books.update(
+   { _id: 1 },    // find a book-stock document with a given _id
+   {
+     $inc: { stock: 5 },      // increase the available #stock
+     $set: {                  // set fields values
+       item: "ABC123",
+       "info.publisher": "2222",    // access to an embedded obj
+       tags: [ "software" ],
+       "ratings.1": { by: "xyz", rating: 3 }    // access to an array element
+     }
+   }
+)
+```
+
+Outcome:
+
+```json
+{
+  "_id" : 1,
+  "item" : "ABC123",
+  "stock" : 5,
+  "info" : { "publisher" : "2222", "pages" : 430 },
+  "tags" : [ "software" ],
+  "ratings" : [ { "by" : "ijk", "rating" : 4 }, { "by" : "xyz", "rating" : 3 } ],
+  "reorder" : false
+}
+```
+
+---
+
+### Timeseries implementation
+
+```
+[{ val: 50, time: 1535530412},
+   { val: 55, time : 1535530415},
+   { val: 56, time: 1535530420},
+   { val: 55, time : 1535530430},
+   { val: 56, time: 1535530432}]
+```
+
+#### One entry per document
+
+```
+{
+  "_id" : ObjectId("5b4690e047f49a04be523cbd"),
+  "p" : 56.56,
+  "symbol" : "MDB",
+  "d" : ISODate("2018-06-30T00:00:01Z")
+},
+{
+  "_id" : ObjectId("5b4690e047f49a04be523cbe"),
+  "p" : 56.58,
+  "symbol" : "MDB",
+  "d" : ISODate("2018-06-30T00:00:02Z")
+}
+```
+
+- High insertion rate 👎🏻 - An update cost way less than an insert
+- Large indexes 👎🏻
+- Low abstraction level 👍🏻
+
+===
+
+### Time-based bucketing of one document
+
+#### Per day
+
+```
+sample = {val: 59, time: 1535530450}
+day = ISODate("2018-08-29")
+db.iot.updateOne({deviceid: 1234, sensorid: 3, nsamples: {$lt: 200}, day: day},
+                 {$setOnInsert: { deviceid: 1234 },
+                  $setOnInsert: { sensorid: 3 },
+                  $setOnInsert: { day: day },
+
+                  $push: {samples: sample},
+                  $min: {first: sample.time},
+                  $max: {last: sample.time},
+                  $inc: {nsamples: 1}},
+                  {upsert: true} )
+```
+
+- Reduce by 200 (i.e.) the index dimension 👍🏻
+- Flexible, buckets could be adjusted based on the transmission frequency 👍🏻
+- Reducing memory and data storage 👍🏻
+
+===
+
+### Time-based bucketing of one document - Take 2
+
+#### Per minute
+
+The keys of `p` represent the timestamp (i.e. second) of the measure.
+
+```
+{
+      "_id" : ObjectId("5b57a8fae303d36d6df69cd3"),
+      "p" : {
+              	"0" : 58.75,
+              	"1" : 58.75,
+              	"2" : 59.45,
+                  ...
+              	"58" : 58.57,
+              	"59" : 59.01
+      },
+      "symbol" : "FB",
+      "d" : ISODate("2018-06-30T00:01:00Z")
+}
+```
+
+- Strong preconditions 👎🏻
+- Complex aggregation queries 👎🏻
+
+===
+
+### Time-based bucketing of one document per day 
+#### Our take in Flairkit
+
+```
+db.canmessages.updateOne(
+{
+  resourceId: resourceId,
+  capabilityId: capabilityId,
+  timestamp: bucketTs // per day
+},
+{
+  $setOnInsert: { resourceId: resourceId },
+  $min: { tstart: ISODate(ts) },
+  $max: { tend: ISODate(ts) },
+  $addToSet: {
+    	values: can_message
+  },
+  $inc: { samplesCount: 1 }
+}, {
+    upsert: true
+});
+```
+
+*References:*
+- Blog posts by MongoDB ([Part 1](https://www.mongodb.com/blog/post/time-series-data-and-mongodb-part-1-introduction), [Part 2](https://www.mongodb.com/blog/post/time-series-data-and-mongodb-part-2-schema-design-best-practices), [Part 3](https://www.mongodb.com/blog/post/time-series-data-and-mongodb-part-3--querying-analyzing-and-presenting-timeseries-data))
+- [Paper by MongoDB](https://www.mongodb.com/collateral/time-series-best-practices)
 
 ---
 
@@ -250,43 +432,34 @@ Verbosity options are:
 - partial matching is supported by the query planner
 
 ---
-### Timeseries implementation
-
-https://www.mongodb.com/blog/post/time-series-data-and-mongodb-part-1-introduction
-https://www.mongodb.com/blog/post/time-series-data-and-mongodb-part-2-schema-design-best-practices
-https://www.mongodb.com/blog/post/time-series-data-and-mongodb-part-3--querying-analyzing-and-presenting-timeseries-data
-
----
-### Timeseries implementation (2)
-
-- Java SDK (vs moongose?)
-- Statement implementation
-
----
 ### Experiment!
 
 #### 4.0
 
-```
-$ docker run -d --name mongodb-rc3-bionic \
-      -p "27017:27017" \
-      mongo:4.2.0-rc3-bionic
+```bash
+$ docker run -d --name mongodb -p "27017:27017" mongo
 ```
 
 #### 4.2 (RC)
 
-```  
-$ docker run -d --name mongodb-rc3-bionic \
-      -p "27017:27017" \
-      mongo
+```bash
+$ docker run -d --name mongodb-rc3-bionic -p "27017:27017" mongo-rc3-bionic
 ```
 
 ##### Create the root user
 
-```
+```bash
 $ docker exec -it ta-fleet-mongodb mongo admin
 $ db.createUser({user:'mongodb', pwd:'mongodb', roles:[{role:'userAdminAnyDatabase',db:'admin'}] });
 $ exit
 $ mongo
 ```
+#### Client
 
+**[NoSQL Booster for MongoBD](https://nosqlbooster.com/features)** (30d trial mode)
+
+`brew cask install nosqlbooster-for-mongodb`
+
+**[Robo 3T](https://robomongo.org/)** (free & lightweight)
+
+`brew cask install robo-3t`
