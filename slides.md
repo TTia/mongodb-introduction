@@ -114,7 +114,7 @@ db.users.find(
 
 $ db.students.find( { semester: 1, $elemMatch: { grades: { $gte: 85 } } }, { "grades.$": 1 } )
 // If you specify a single query predicate in the $elemMatch expression, $elemMatch is not necessary.
-{ "_id" : 1, "grades" : [ 87 ] }
+{ "_id" : 1, "grades" : [ 87, 90 ] }
 { "_id" : 3, "grades" : [ 85 ] }
 ```
 
@@ -326,7 +326,12 @@ The keys of `p` represent the timestamp (i.e. second) of the measure.
 ### Time-based bucketing of one document per day 
 #### Our take in Flairkit
 
-```
+```js
+let resourceId = "...";
+let capabilityId = "...";
+let bucketTs = ISODate('..day..');
+
+
 db.canmessages.updateOne(
 {
   resourceId: resourceId,
@@ -335,6 +340,8 @@ db.canmessages.updateOne(
 },
 {
   $setOnInsert: { resourceId: resourceId },
+  $setOnInsert: { capabilityId: capabilityId },
+  $setOnInsert: { timestamp: timestamp },
   $min: { tstart: ISODate(ts) },
   $max: { tend: ISODate(ts) },
   $addToSet: {
