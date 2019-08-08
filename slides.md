@@ -15,9 +15,10 @@
 ##### Topics:
 - Key features
 - CRUD examples and uses
-- Aggregation pipeline
 - Schema definition
-- (Timeseries implementation)
+- Timeseries implementation
+- Aggregation pipeline
+- Indexes
 
 [MongoDB Reference](https://docs.mongodb.com/manual/introduction/)
 
